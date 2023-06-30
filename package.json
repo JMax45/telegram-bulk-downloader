@@ -1,0 +1,28 @@
+{
+  "name": "telegram-bulk-downloader",
+  "main": "build/index.js",
+  "bin": "build/bin.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node build/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JMax45/telegram-bulk-downloader.git"
+  },
+  "author": "JMax45",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/JMax45/telegram-bulk-downloader/issues"
+  },
+  "dependencies": {
+    "byteroo": "^1.4.1",
+    "commander": "^11.0.0",
+    "inquirer": "^8.2.5",
+    "telegram": "^2.17.10"
+  },
+  "devDependencies": {
+    "@types/inquirer": "^9.0.3",
+    "@types/node": "^20.3.1"
+  }
+}
