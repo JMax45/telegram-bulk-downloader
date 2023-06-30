@@ -4,22 +4,11 @@ telegram-bulk-downloader is a command-line tool built with Node.js that allows y
 
 ## Installation
 
-To install telegram-bulk-downloader, follow these steps:
+To install telegram-bulk-downloader, use npm:
 
-1. Clone the repository from GitHub:
-
-   ```shell
-   git clone https://github.com/JMax45/telegram-bulk-downloader
-   cd telegram-bulk-downloader
-   ```
-
-2. Install the tool globally using npm:
-
-   ```shell
-   npm install ./ -g
-   ```
-
-   Please note that in the future, the tool will also be available on npm for easier installation.
+```shell
+npm install -g telegram-bulk-downloader
+```
 
 ## Usage
 
