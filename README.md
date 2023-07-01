@@ -4,6 +4,8 @@
 
 telegram-bulk-downloader is a command-line tool built with Node.js that allows you to download all images in a Telegram chat. It provides a convenient way to bulk download images and has plans to support other media types in the future.
 
+https://github.com/JMax45/telegram-bulk-downloader/assets/36378436/4e744c10-7e6a-4167-b528-bf63d02dcd67
+
 ## Installation
 
 To install telegram-bulk-downloader, use npm:
