@@ -7,6 +7,7 @@ import Byteroo, { Container } from 'byteroo';
 import { Entity } from 'telegram/define';
 import extractDisplayName from './helpers/extractDisplayName';
 import ask from './helpers/ask';
+import { promisify } from 'util';
 
 class TelegramBulkDownloader {
   private storage: Byteroo;
@@ -37,6 +38,14 @@ class TelegramBulkDownloader {
       },
     ]);
 
+    const { metadata } = await inquirer.prompt([
+      {
+        name: 'metadata',
+        message: 'Do you want to include metadata.json? (Recommended: no)',
+        type: 'confirm',
+      },
+    ]);
+
     try {
       const res = await this.client.getEntity(query.id);
       const outPath = await ask('Enter the folder path for file storage: ');
@@ -45,6 +54,7 @@ class TelegramBulkDownloader {
         displayName: extractDisplayName(res),
         entityJson: res.toJSON(),
         outPath: path.resolve(outPath),
+        metadata,
       });
       await this.download(res);
     } catch (err) {
@@ -59,6 +69,24 @@ class TelegramBulkDownloader {
     const id = entity.id.toString();
     const latestMessage = await this.client.getMessages(entity, { limit: 1 });
     this.state.set(id, { ...this.state.get(id), limit: latestMessage[0].id });
+
+    const { metadataOption } = this.state.get(id);
+    let metadata: any[];
+
+    if (metadataOption) {
+      try {
+        metadata = JSON.parse(
+          await promisify(fs.readFile)(
+            path.join(this.state.get(id).outPath, 'metadata.json'),
+            'utf-8'
+          )
+        );
+      } catch (err) {
+        metadata = [];
+      }
+    } else {
+      metadata = [];
+    }
 
     while (true) {
       const offset = this.state.get(id).offset;
@@ -87,6 +115,14 @@ class TelegramBulkDownloader {
         console.log(
           `Downloaded file ${filePath}, offset: ${this.state.get(id).offset}`
         );
+
+        if (metadata) {
+          metadata.push(msg);
+          await promisify(fs.writeFile)(
+            path.join(this.state.get(id).outPath, 'metadata.json'),
+            JSON.stringify(metadata, null, 4)
+          );
+        }
 
         if (this.SIGINT) break;
       }
