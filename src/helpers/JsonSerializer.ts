@@ -1,15 +1,20 @@
 import { appendFile, open, read, stat, truncate, write, writeFile } from 'fs';
 import { promisify } from 'util';
+import AsyncQueue from './AsyncQueue';
 
 class JsonSerializer {
   private filePath: string;
+  private queue: AsyncQueue;
   constructor(filePath: string) {
     this.filePath = filePath;
+    this.queue = new AsyncQueue();
   }
   async append(data: any) {
-    await this.prepareJsonFileForAppending();
-    const jsonString = JSON.stringify(data);
-    await promisify(appendFile)(this.filePath, jsonString + ']');
+    this.queue.enqueue(async () => {
+      await this.prepareJsonFileForAppending();
+      const jsonString = JSON.stringify(data);
+      await promisify(appendFile)(this.filePath, jsonString + ']');
+    });
   }
   private prepareJsonFileForAppending = async () => {
     let replacer = ',';
