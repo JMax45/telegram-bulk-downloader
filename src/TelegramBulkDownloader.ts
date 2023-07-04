@@ -7,7 +7,7 @@ import Byteroo, { Container } from 'byteroo';
 import { Entity } from 'telegram/define';
 import extractDisplayName from './helpers/extractDisplayName';
 import ask from './helpers/ask';
-import { promisify } from 'util';
+import JsonSerializer from './helpers/JsonSerializer';
 
 class TelegramBulkDownloader {
   private storage: Byteroo;
@@ -70,22 +70,12 @@ class TelegramBulkDownloader {
     const latestMessage = await this.client.getMessages(entity, { limit: 1 });
     this.state.set(id, { ...this.state.get(id), limit: latestMessage[0].id });
 
-    const { metadataOption } = this.state.get(id);
-    let metadata: any[];
-
+    const metadataOption = this.state.get(id).metadata;
+    let jsonSerializer;
     if (metadataOption) {
-      try {
-        metadata = JSON.parse(
-          await promisify(fs.readFile)(
-            path.join(this.state.get(id).outPath, 'metadata.json'),
-            'utf-8'
-          )
-        );
-      } catch (err) {
-        metadata = [];
-      }
-    } else {
-      metadata = [];
+      jsonSerializer = new JsonSerializer(
+        path.join(this.state.get(id).outPath, 'metadata.json')
+      );
     }
 
     while (true) {
@@ -116,14 +106,7 @@ class TelegramBulkDownloader {
           `Downloaded file ${filePath}, offset: ${this.state.get(id).offset}`
         );
 
-        if (metadata) {
-          metadata.push(msg);
-          await promisify(fs.writeFile)(
-            path.join(this.state.get(id).outPath, 'metadata.json'),
-            JSON.stringify(metadata, null, 4)
-          );
-        }
-
+        if (jsonSerializer) await jsonSerializer.append(msg);
         if (this.SIGINT) break;
       }
 
