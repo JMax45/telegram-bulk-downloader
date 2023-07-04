@@ -17,22 +17,18 @@ const prepareJsonFileForAppending = async (
   const stats = await promisify(stat)(filePath);
   const fd = await promisify(open)(filePath, 'r+');
 
-  /**
-   * Should be refactored, the BUF_LENGTH = 100 is an arbitrary number to account for potential newlines at the end of the file.
-   * It will fail if there's a file with 101 newlines. There should instead be a loop that starts at the end of the file and goes
-   * chunk by chunk until available data ends.
-   */
-  const BUF_LENGTH = 100;
+  const BUF_LENGTH = 10;
   const buffer = Buffer.alloc(BUF_LENGTH);
-  const data = await promisify(read)(
-    fd,
-    buffer,
-    0,
-    BUF_LENGTH,
-    stats.size - BUF_LENGTH
-  );
-  const charIndex = data.buffer.toString().lastIndexOf(']');
-  if (data.buffer.toString().charAt(charIndex) !== ']')
+  let position = stats.size;
+  let charIndex = -1;
+
+  while (position > -1 && charIndex <= -1) {
+    const data = await promisify(read)(fd, buffer, 0, BUF_LENGTH, position);
+    charIndex = data.buffer.toString().lastIndexOf(']');
+    position = position - BUF_LENGTH;
+  }
+
+  if (charIndex <= -1)
     throw new Error(`Failed to verify ${filePath} integrity`);
 
   await promisify(write)(
@@ -40,14 +36,11 @@ const prepareJsonFileForAppending = async (
     Buffer.from(replacer),
     0,
     replacer.length,
-    stats.size - data.bytesRead + charIndex
+    position + BUF_LENGTH + charIndex
   );
 
-  if (stats.size - data.bytesRead + charIndex <= stats.size)
-    await promisify(truncate)(
-      filePath,
-      stats.size - data.bytesRead + charIndex + 1
-    );
+  if (position + BUF_LENGTH + charIndex <= stats.size)
+    await promisify(truncate)(filePath, position + BUF_LENGTH + charIndex + 1);
 };
 
 export default prepareJsonFileForAppending;
