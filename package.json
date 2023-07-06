@@ -17,6 +17,7 @@
     "url": "https://github.com/JMax45/telegram-bulk-downloader/issues"
   },
   "dependencies": {
+    "@inquirer/checkbox": "^1.3.3",
     "byteroo": "^1.4.1",
     "commander": "^11.0.0",
     "inquirer": "^8.2.5",

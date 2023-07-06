@@ -8,6 +8,7 @@ import { Entity } from 'telegram/define';
 import extractDisplayName from './helpers/extractDisplayName';
 import ask from './helpers/ask';
 import JsonSerializer from './helpers/JsonSerializer';
+import checkbox, { Separator } from '@inquirer/checkbox';
 
 class TelegramBulkDownloader {
   private storage: Byteroo;
@@ -38,16 +39,31 @@ class TelegramBulkDownloader {
       },
     ]);
 
-    const { metadata } = await inquirer.prompt([
-      {
-        name: 'metadata',
-        message: 'Do you want to include metadata.json? (Recommended: no)',
-        type: 'confirm',
-      },
-    ]);
-
     try {
       const res = await this.client.getEntity(query.id);
+      const { metadata } = await inquirer.prompt([
+        {
+          name: 'metadata',
+          message: 'Do you want to include metadata.json? (Recommended: no)',
+          type: 'confirm',
+        },
+      ]);
+      let mediaTypes: string[] = [];
+      while (mediaTypes.length <= 0) {
+        mediaTypes = await checkbox({
+          message: 'Select media types to download',
+          choices: [
+            { name: 'Pictures', value: 'pictures' },
+            { name: 'Videos', value: 'videos' },
+            new Separator(),
+            {
+              name: 'Music',
+              value: 'music',
+              disabled: '(music is not available right now)',
+            },
+          ],
+        });
+      }
       const outPath = await ask('Enter the folder path for file storage: ');
       this.state.set(res.id.toString(), {
         offset: 0,
@@ -55,6 +71,7 @@ class TelegramBulkDownloader {
         entityJson: res.toJSON(),
         outPath: path.resolve(outPath),
         metadata,
+        mediaTypes,
       });
       await this.download(res);
     } catch (err) {
