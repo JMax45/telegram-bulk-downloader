@@ -9,6 +9,9 @@ import extractDisplayName from './helpers/extractDisplayName';
 import ask from './helpers/ask';
 import JsonSerializer from './helpers/JsonSerializer';
 import checkbox, { Separator } from '@inquirer/checkbox';
+import getInputFilter from './helpers/getInputFilter';
+import getFilenameExtension from './helpers/getFilenameExtension';
+import MediaType from './types/MediaType';
 
 class TelegramBulkDownloader {
   private storage: Byteroo;
@@ -48,17 +51,17 @@ class TelegramBulkDownloader {
           type: 'confirm',
         },
       ]);
-      let mediaTypes: string[] = [];
+      let mediaTypes: MediaType[] = [];
       while (mediaTypes.length <= 0) {
         mediaTypes = await checkbox({
           message: 'Select media types to download',
           choices: [
-            { name: 'Pictures', value: 'pictures' },
-            { name: 'Videos', value: 'videos' },
+            { name: 'Pictures', value: 'InputMessagesFilterPhotos' },
+            { name: 'Videos', value: 'InputMessagesFilterVideo' },
             new Separator(),
             {
               name: 'Music',
-              value: 'music',
+              value: 'InputMessagesFilterMusic',
               disabled: '(music is not available right now)',
             },
           ],
@@ -66,21 +69,33 @@ class TelegramBulkDownloader {
       }
       const outPath = await ask('Enter the folder path for file storage: ');
       this.state.set(res.id.toString(), {
-        offset: 0,
         displayName: extractDisplayName(res),
         entityJson: res.toJSON(),
         outPath: path.resolve(outPath),
         metadata,
-        mediaTypes,
+        mediaTypes: mediaTypes.map((e) => ({ type: e, offset: 0 })),
       });
       await this.download(res);
     } catch (err) {
-      console.error('Failed to retrieve chat');
+      console.error('Failed to retrieve chat', err);
       this.main();
     }
   }
 
   private async download(entity: Entity) {
+    if (!this.client) throw new Error('TelegramClient undefined');
+    const id = entity.id.toString();
+
+    for (const mediaType of this.state.get(id).mediaTypes) {
+      await this.downloadMediaType(entity, mediaType.type);
+    }
+
+    this.state.remove(id);
+    await this.state.commit();
+    process.exit(0);
+  }
+
+  private async downloadMediaType(entity: Entity, mediaType: MediaType) {
     if (!this.client) throw new Error('TelegramClient undefined');
     this.isDownloading = true;
     const id = entity.id.toString();
@@ -96,18 +111,18 @@ class TelegramBulkDownloader {
     }
 
     while (true) {
-      const offset = this.state.get(id).offset;
+      let offset = this.state
+        .get(id)
+        .mediaTypes.find((e: any) => e.type === mediaType).offset;
 
       const messages = await this.client.getMessages(entity, {
         limit: 1000,
         offsetId: offset,
         reverse: true,
-        filter: new Api.InputMessagesFilterPhotos(),
+        filter: getInputFilter(mediaType),
       });
 
-      const mediaMessages = messages.filter(
-        (msg) => msg.media && msg.media.className === 'MessageMediaPhoto'
-      );
+      const mediaMessages = messages;
 
       const downloadDir = this.state.get(id).outPath;
       if (!fs.existsSync(downloadDir)) {
@@ -117,7 +132,10 @@ class TelegramBulkDownloader {
       let msgId = offset;
       for (const msg of mediaMessages) {
         const buffer = await this.client.downloadMedia(msg);
-        const filePath = path.join(downloadDir, `${msg.id}.jpg`);
+        const filePath = path.join(
+          downloadDir,
+          `${msg.id}.${getFilenameExtension(msg)}`
+        );
         fs.writeFileSync(filePath, buffer as any);
         msgId = msg.id;
         console.log(
@@ -128,9 +146,18 @@ class TelegramBulkDownloader {
         if (this.SIGINT) break;
       }
 
+      offset = mediaMessages.length <= 0 ? offset + 999 : msgId;
+
       this.state.set(id, {
         ...this.state.get(id),
-        offset: mediaMessages.length <= 0 ? offset + 999 : msgId,
+        mediaTypes: this.state.get(id).mediaTypes.map((e: any) => {
+          if (e.type === mediaType)
+            return {
+              ...e,
+              offset,
+            };
+          return e;
+        }),
       });
 
       if (this.SIGINT) {
@@ -140,11 +167,15 @@ class TelegramBulkDownloader {
         await this.state.commit();
         process.exit(0);
       }
-      if (this.state.get(id).offset >= this.state.get(id).limit) {
+      if (offset >= this.state.get(id).limit) {
         console.log(`Exiting, SIGINT=${this.SIGINT}`);
-        this.state.remove(id);
-        await this.state.commit();
-        process.exit(0);
+        this.state.set(id, {
+          ...this.state.get(id),
+          mediaTypes: this.state
+            .get(id)
+            .mediaTypes.filter((e: any) => e.type !== mediaType),
+        });
+        break;
       }
     }
   }
