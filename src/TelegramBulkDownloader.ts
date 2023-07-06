@@ -100,7 +100,7 @@ class TelegramBulkDownloader {
       let msgId = offset;
       for (const msg of mediaMessages) {
         const buffer = await this.client.downloadMedia(msg);
-        const filePath = path.join(downloadDir, `${msg.id}-${msg.date}.jpg`);
+        const filePath = path.join(downloadDir, `${msg.id}.jpg`);
         fs.writeFileSync(filePath, buffer as any);
         msgId = msg.id;
         console.log(
