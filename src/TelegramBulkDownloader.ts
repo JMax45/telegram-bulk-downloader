@@ -1,4 +1,4 @@
-import { TelegramClient } from 'telegram';
+import { Api, TelegramClient } from 'telegram';
 import { StringSession } from 'telegram/sessions';
 import fs from 'fs';
 import path from 'path';
@@ -85,6 +85,7 @@ class TelegramBulkDownloader {
         limit: 1000,
         offsetId: offset,
         reverse: true,
+        filter: new Api.InputMessagesFilterPhotos(),
       });
 
       const mediaMessages = messages.filter(
