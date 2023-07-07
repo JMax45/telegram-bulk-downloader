@@ -1,6 +1,9 @@
 type MediaType =
   | 'InputMessagesFilterPhotos'
   | 'InputMessagesFilterVideo'
-  | 'InputMessagesFilterMusic';
+  | 'InputMessagesFilterDocument'
+  | 'InputMessagesFilterMusic'
+  | 'InputMessagesFilterVoice'
+  | 'InputMessagesFilterGif';
 
 export default MediaType;

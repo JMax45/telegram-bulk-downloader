@@ -1,4 +1,4 @@
-import { Api, TelegramClient } from 'telegram';
+import { TelegramClient } from 'telegram';
 import { StringSession } from 'telegram/sessions';
 import fs from 'fs';
 import path from 'path';
@@ -8,7 +8,7 @@ import { Entity } from 'telegram/define';
 import extractDisplayName from './helpers/extractDisplayName';
 import ask from './helpers/ask';
 import JsonSerializer from './helpers/JsonSerializer';
-import checkbox, { Separator } from '@inquirer/checkbox';
+import checkbox from '@inquirer/checkbox';
 import getInputFilter from './helpers/getInputFilter';
 import getFilenameExtension from './helpers/getFilenameExtension';
 import MediaType from './types/MediaType';
@@ -58,12 +58,10 @@ class TelegramBulkDownloader {
           choices: [
             { name: 'Pictures', value: 'InputMessagesFilterPhotos' },
             { name: 'Videos', value: 'InputMessagesFilterVideo' },
-            new Separator(),
-            {
-              name: 'Music',
-              value: 'InputMessagesFilterMusic',
-              disabled: '(music is not available right now)',
-            },
+            { name: 'Documents', value: 'InputMessagesFilterDocument' },
+            { name: 'Music', value: 'InputMessagesFilterMusic' },
+            { name: 'Voice messages', value: 'InputMessagesFilterVoice' },
+            { name: 'GIFs', value: 'InputMessagesFilterGif' },
           ],
         });
       }
