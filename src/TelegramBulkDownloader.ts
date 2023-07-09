@@ -12,6 +12,8 @@ import checkbox from '@inquirer/checkbox';
 import getInputFilter from './helpers/getInputFilter';
 import getFilenameExtension from './helpers/getFilenameExtension';
 import MediaType from './types/MediaType';
+import { LogLevel } from 'telegram/extensions/Logger';
+import cliProgress from 'cli-progress';
 
 class TelegramBulkDownloader {
   private storage: Byteroo;
@@ -129,17 +131,36 @@ class TelegramBulkDownloader {
 
       let msgId = offset;
       for (const msg of mediaMessages) {
-        const buffer = await this.client.downloadMedia(msg);
-        const filePath = path.join(
-          downloadDir,
-          `${msg.id}.${getFilenameExtension(msg)}`
+        const bar = new cliProgress.SingleBar(
+          {
+            format: `${msg.id}.${getFilenameExtension(
+              msg
+            )} {bar} {percentage}% | ETA: {eta}s`,
+          },
+          cliProgress.Presets.legacy
         );
-        fs.writeFileSync(filePath, buffer as any);
-        msgId = msg.id;
-        console.log(
-          `Downloaded file ${filePath}, offset: ${this.state.get(id).offset}`
-        );
-
+        bar.start(100, 0);
+        try {
+          const buffer = await this.client.downloadMedia(msg, {
+            progressCallback: (downloaded, total) => {
+              if (this.SIGINT)
+                throw new Error(`Aborting download, SIGINT=true`);
+              const ratio = Number(downloaded) / Number(total);
+              const progress = Math.round(Number(ratio) * 100);
+              bar.update(progress);
+            },
+          });
+          bar.update(100);
+          bar.stop();
+          const filePath = path.join(
+            downloadDir,
+            `${msg.id}.${getFilenameExtension(msg)}`
+          );
+          fs.writeFileSync(filePath, buffer as any);
+          msgId = msg.id;
+        } catch (err) {
+          console.warn(err);
+        }
         if (jsonSerializer) await jsonSerializer.append(msg);
         if (this.SIGINT) break;
       }
@@ -225,6 +246,7 @@ class TelegramBulkDownloader {
         API_HASH,
         {}
       );
+      this.client.setLogLevel(LogLevel.NONE);
     }
 
     if (this.client.disconnected) {
