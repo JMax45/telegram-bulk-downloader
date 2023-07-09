@@ -5,7 +5,7 @@
   "bin": "build/bin.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "start": "node build/index.js"
+    "start": "node build/bin.js"
   },
   "repository": {
     "type": "git",
