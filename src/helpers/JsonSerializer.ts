@@ -36,7 +36,11 @@ class JsonSerializer {
       const data = await promisify(read)(fd, buffer, 0, BUF_LENGTH, position);
       charIndex = data.buffer.toString().lastIndexOf(']');
       if (charIndex > -1) break;
+      // If position was 0, we read the whole file, break from loop
+      if (position <= 0) break;
       position = position - BUF_LENGTH;
+      // If position goes below 0, set it to 0, otherwise will crash on Windows
+      if (position < 0) position = 0;
     }
 
     if (position <= -1) position = 0;
