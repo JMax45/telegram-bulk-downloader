@@ -74,6 +74,7 @@ class TelegramBulkDownloader {
         outPath: path.resolve(outPath),
         metadata,
         mediaTypes: mediaTypes.map((e) => ({ type: e, offset: 0 })),
+        originalId: query.id
       });
       await this.download(res);
     } catch (err) {
@@ -219,7 +220,7 @@ class TelegramBulkDownloader {
 
     const entityRes = await this.client.getEntity(
       this.state.get(res.resume).entityJson.username ||
-        this.state.get(res.resume).entityJson.id
+        this.state.get(res.resume).originalId
     );
     this.download(entityRes);
   }
